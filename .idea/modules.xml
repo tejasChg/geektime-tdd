@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/di.contanier.iml" filepath="$PROJECT_DIR$/.idea/modules/di.contanier.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/di.contanier.main.iml" filepath="$PROJECT_DIR$/.idea/modules/di.contanier.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/di.contanier.test.iml" filepath="$PROJECT_DIR$/.idea/modules/di.contanier.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/geektime-tdd.iml" filepath="$PROJECT_DIR$/geektime-tdd.iml" />
+    </modules>
+  </component>
+</project>
