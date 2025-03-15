@@ -22,7 +22,7 @@ public class Context {
 
     public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {
         Constructor<Implementation> injectionConstructor = getInjectConstructor(implementation);
-        providers.put(type, new ConstructorInjectionProvider<>(injectionConstructor));
+        providers.put(type, new ConstructorInjectionProvider<>(type,injectionConstructor));
     }
 
     private static <Type> Constructor<Type> getInjectConstructor(Class<Type> implementation) {
@@ -44,24 +44,28 @@ public class Context {
     }
 
     class ConstructorInjectionProvider<Type> implements Provider<Type> {
-        private final Constructor<Type> injectionConstructor;
+        private  Constructor<Type> injectionConstructor;
+        private  Class<?> componentType;
 
         private boolean constructing = false;
 
-        public ConstructorInjectionProvider(Constructor<Type> injectionConstructor) {
+        public ConstructorInjectionProvider(Class<?> componentType, Constructor<Type> injectionConstructor) {
+            this.componentType = componentType;
             this.injectionConstructor = injectionConstructor;
         }
 
         @Override
         public Type get() {
             if (constructing) {
-                throw new CycliDependencyFoundException();
+                throw new CycliDependencyFoundException(componentType);
             }
+            try {
             constructing = true;
             Object[] dependencies =
-                stream(injectionConstructor.getParameters()).map(p -> Context.this.get(p.getType()).orElseThrow(DependencyNotFoundException::new)).toArray(Object[]::new);
-            try {
+                stream(injectionConstructor.getParameters()).map(p -> Context.this.get(p.getType()).orElseThrow(()->new DependencyNotFoundException(p.getType(),componentType))).toArray(Object[]::new);
                 return injectionConstructor.newInstance(dependencies);
+            }catch (CycliDependencyFoundException e){
+                throw new CycliDependencyFoundException(componentType,e);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 throw new RuntimeException(e);
             } finally {

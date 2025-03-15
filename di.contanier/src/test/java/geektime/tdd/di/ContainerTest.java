@@ -4,8 +4,10 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.internal.util.collections.Sets;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -90,10 +92,25 @@ public class ContainerTest {
             }
 
             @Test
-            public void should_throw_an_exception_if_dependency_not_exist() {
+            public void should_throw_an_exception_if_dependency_not_found() {
                 context.bind(Components.class, ComponentWithInjectConstructor.class);
 
-                assertThrows(DependencyNotFoundException.class, () -> context.get(Components.class));
+                DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Components.class));
+
+                assertEquals(Dependency.class, exception.getDependency());
+                assertEquals(Components.class, exception.getComponent());
+
+            }
+
+            @Test
+            public void should_throw_an_exception_if_transitive_dependency_not_found() {
+                context.bind(Components.class, ComponentWithInjectConstructor.class);
+                context.bind(Dependency.class, DependencyWithInjectConstructor.class);
+
+                DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> context.get(Components.class));
+
+                assertEquals(String.class, exception.getDependency());
+                assertEquals(Dependency.class, exception.getComponent());
             }
 
             @Test
@@ -101,7 +118,12 @@ public class ContainerTest {
                 context.bind(Components.class, ComponentWithInjectConstructor.class);
                 context.bind(Dependency.class, DependencyDependedOnComponent.class);
 
-                assertThrows(CycliDependencyFoundException.class, () -> context.get(Components.class));
+                CycliDependencyFoundException exception = assertThrows(CycliDependencyFoundException.class, () -> context.get(Components.class));
+
+                Set<Class<?>> components = exception.getComponents();
+                assertEquals(2, components.size());
+                assertTrue(components.contains(Components.class));
+                assertTrue(components.contains(Dependency.class));
             }
 
             @Test
@@ -110,7 +132,13 @@ public class ContainerTest {
                 context.bind(Dependency.class, DependencyDependedOnAnotherDependency.class);
                 context.bind(AnotherDependency.class, AnotherDependencyDependedOnComponent.class);
 
-                assertThrows(CycliDependencyFoundException.class, () -> context.get(Components.class));
+                CycliDependencyFoundException exception = assertThrows(CycliDependencyFoundException.class, () -> context.get(Components.class));
+
+                Set<Class<?>> components = exception.getComponents();
+                assertEquals(3, components.size());
+                assertTrue(components.contains(Components.class));
+                assertTrue(components.contains(Dependency.class));
+                assertTrue(components.contains(AnotherDependency.class));
             }
         }
 
