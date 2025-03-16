@@ -8,20 +8,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 
 public class ContextConfig {
 
     private Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
+    private Map<Class<?>, List<Class<?>>> dependencies = new HashMap<>();
 
     public <Type> void bind(Class<Type> type, Type instance) {
         providers.put(type, context -> instance);
+        dependencies.put(type, asList());
     }
 
     public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {
         Constructor<Implementation> injectionConstructor = getInjectConstructor(implementation);
         providers.put(type, new ConstructorInjectionProvider<>(type, injectionConstructor));
+        dependencies.put(type, stream(injectionConstructor.getParameters()).map(p -> p.getType()).collect(Collectors.toList()));
     }
 
     private static <Type> Constructor<Type> getInjectConstructor(Class<Type> implementation) {
@@ -43,6 +48,13 @@ public class ContextConfig {
     }
 
     public Context getContext() {
+        for (Class<?> component : dependencies.keySet()) {
+            for (Class<?> dependency : dependencies.get(component)) {
+                if (!dependencies.containsKey(dependency)) {
+                    throw new DependencyNotFoundException(dependency, component);
+                }
+            }
+        }
         return new Context() {
             @Override
             public <Type> Optional<Type> get(Class<Type> type) {
@@ -51,7 +63,7 @@ public class ContextConfig {
         };
     }
 
-    class ConstructorInjectionProvider<Type> implements  ComponentProvider<Type> {
+    class ConstructorInjectionProvider<Type> implements ComponentProvider<Type> {
         private Constructor<Type> injectionConstructor;
         private Class<?> componentType;
 
