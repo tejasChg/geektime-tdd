@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -148,7 +149,44 @@ public class ContainerTest {
 
         @Nested
         public class FieldInjection {
+            static class ComponentWithFieldInjection {
+                @Inject
+                Dependency dependency;
+            }
 
+            static class SubClassWithFieldInjection extends ComponentWithFieldInjection {
+
+            }
+
+            @Test
+            public void should_inject_dependency_via_field() {
+                Dependency dependency = new Dependency() {
+                };
+                config.bind(Dependency.class, dependency);
+                config.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+
+                ComponentWithFieldInjection component = config.getContext().get(ComponentWithFieldInjection.class).get();
+
+                assertSame(dependency, component.dependency);
+            }
+
+            @Test
+            public void should_inject_dependency_via_superclass_inject_field() {
+                Dependency dependency = new Dependency() {
+                };
+                config.bind(Dependency.class, dependency);
+                config.bind(SubClassWithFieldInjection.class, SubClassWithFieldInjection.class);
+
+                SubClassWithFieldInjection component = config.getContext().get(SubClassWithFieldInjection.class).get();
+
+                assertSame(dependency, component.dependency);
+            }
+
+            @Test
+            public void should_inject_field_dependency_in_dependencies() {
+                ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+                assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
+            }
         }
 
         @Nested
