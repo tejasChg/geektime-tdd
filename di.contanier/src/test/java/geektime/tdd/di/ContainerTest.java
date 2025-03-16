@@ -43,8 +43,24 @@ public class ContainerTest {
             assertTrue(optionalComponents.isEmpty());
         }
 
+        abstract class AbstractComponent implements Components {
+            @Inject
+            public AbstractComponent() {
+            }
+        }
+
         //TODO: abstract class
+        @Test
+        public void should_throw_an_exception_if_component_is_abstract() {
+            assertThrows(IllegalComponentException.class, ()-> new ConstructorInjectionProvider<>(AbstractComponent.class));
+        }
+
         //TODO: interface
+        @Test
+        public void should_throw_an_exception_if_component_is_interface() {
+            assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Components.class));
+        }
+
         @Nested
         public class ConstructorInjection {
 
@@ -182,6 +198,17 @@ public class ContainerTest {
                 assertSame(dependency, component.dependency);
             }
 
+            //TODO throw exception if field is final
+            static class FinalInjectField {
+                @Inject
+                final Dependency dependency = null;
+            }
+
+            @Test
+            public void should_throw_exception_if_field_is_final() {
+                assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(FinalInjectField.class));
+            }
+
             @Test
             public void should_inject_field_dependency_in_dependencies() {
                 ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
@@ -297,7 +324,18 @@ public class ContainerTest {
                 ConstructorInjectionProvider<InjectMethodWithDependency> provider = new ConstructorInjectionProvider<>(InjectMethodWithDependency.class);
                 assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
             }
+
             //TODO  inject throw exception if type parameter defined
+            static class InjectMethodWithTypeParameter {
+                @Inject
+                <T> void install(T t) {
+                }
+            }
+
+            @Test
+            public void should_throw_exception_if_inject_method_has_type_parameter() {
+                assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(InjectMethodWithTypeParameter.class));
+            }
         }
 
     }
