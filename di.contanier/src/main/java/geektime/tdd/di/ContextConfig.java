@@ -1,7 +1,6 @@
 package geektime.tdd.di;
 
 import jakarta.inject.Inject;
-import jakarta.inject.Provider;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -14,10 +13,10 @@ import static java.util.Arrays.stream;
 
 public class ContextConfig {
 
-    private Map<Class<?>, Provider<?>> providers = new HashMap<>();
+    private Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
 
     public <Type> void bind(Class<Type> type, Type instance) {
-        providers.put(type, () -> instance);
+        providers.put(type, context -> instance);
     }
 
     public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation) {
@@ -39,16 +38,20 @@ public class ContextConfig {
         });
     }
 
+    interface ComponentProvider<T> {
+        T get(Context context);
+    }
+
     public Context getContext() {
         return new Context() {
             @Override
             public <Type> Optional<Type> get(Class<Type> type) {
-                return Optional.ofNullable(providers.get(type)).map(provider -> (Type) provider.get());
+                return Optional.ofNullable(providers.get(type)).map(provider -> (Type) provider.get(this));
             }
         };
     }
 
-    class ConstructorInjectionProvider<Type> implements Provider<Type> {
+    class ConstructorInjectionProvider<Type> implements  ComponentProvider<Type> {
         private Constructor<Type> injectionConstructor;
         private Class<?> componentType;
 
@@ -60,7 +63,7 @@ public class ContextConfig {
         }
 
         @Override
-        public Type get() {
+        public Type get(Context context) {
             if (constructing) {
                 throw new CycliDependencyFoundException(componentType);
             }
@@ -70,7 +73,7 @@ public class ContextConfig {
                     stream(injectionConstructor.getParameters()).map(
                         p -> {
                             Class<?> type = p.getType();
-                            return getContext().get(type).orElseThrow(() -> new DependencyNotFoundException(p.getType(), componentType));
+                            return context.get(type).orElseThrow(() -> new DependencyNotFoundException(p.getType(), componentType));
                         }).toArray(Object[]::new);
                 return injectionConstructor.newInstance(dependencies);
             } catch (CycliDependencyFoundException e) {
