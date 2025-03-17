@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,41 +39,6 @@ public class ContainerTest {
             Context context = config.getContext();
             Optional<Components> optionalComponents = context.get(Components.class);
             assertTrue(optionalComponents.isEmpty());
-        }
-
-        abstract class AbstractComponent implements Components {
-            @Inject
-            public AbstractComponent() {
-            }
-        }
-
-        //TODO: abstract class
-        @Test
-        public void should_throw_an_exception_if_component_is_abstract() {
-            assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(AbstractComponent.class));
-        }
-
-        //TODO: interface
-        @Test
-        public void should_throw_an_exception_if_component_is_interface() {
-            assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Components.class));
-        }
-
-        @Test
-        public void should_throw_an_exception_if_multi_inject_constructor_provided() {
-            assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(ComponentWithMultiInjectConstructor.class));
-        }
-
-
-        @Test
-        public void should_throw_an_exception_if_no_inject_nor_default_constructors_provided() {
-            assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(ComponentWithNoInjectConstructorNorDefaultConstructor.class));
-        }
-
-        @Test
-        public void should_include_dependency_from_inject_constructor() {
-            ConstructorInjectionProvider<ComponentWithInjectConstructor> provider = new ConstructorInjectionProvider<>(ComponentWithInjectConstructor.class);
-            assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
         }
 
         @Nested
@@ -145,11 +109,6 @@ interface AnotherDependency {
 
 }
 
-class ComponentWithDefaultConstructor implements Components {
-    public ComponentWithDefaultConstructor() {
-    }
-}
-
 class ComponentWithInjectConstructor implements Components {
     private Dependency dependency;
 
@@ -163,33 +122,20 @@ class ComponentWithInjectConstructor implements Components {
     }
 }
 
-class ComponentWithMultiInjectConstructor implements Components {
+class MultiInjectConstructor implements Components {
 
     @Inject
-    public ComponentWithMultiInjectConstructor(String name, Double value) {
+    public MultiInjectConstructor(String name, Double value) {
     }
 
     @Inject
-    public ComponentWithMultiInjectConstructor(Dependency dependency) {
+    public MultiInjectConstructor(Dependency dependency) {
     }
 
 }
 
-class ComponentWithNoInjectConstructorNorDefaultConstructor implements Components {
-    public ComponentWithNoInjectConstructorNorDefaultConstructor(String name) {
-    }
-}
-
-class DependencyWithInjectConstructor implements Dependency {
-    private String dependency;
-
-    @Inject
-    public DependencyWithInjectConstructor(String dependency) {
-        this.dependency = dependency;
-    }
-
-    public String getDependency() {
-        return dependency;
+class NoInjectConstructorNorDefaultConstructor implements Components {
+    public NoInjectConstructorNorDefaultConstructor(String name) {
     }
 }
 
