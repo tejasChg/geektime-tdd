@@ -32,7 +32,7 @@ public class InjectionTest {
 
         @Nested
         class Injection {
-            static class DefaultConstructor implements Components {
+            static class DefaultConstructor implements Component {
                 public DefaultConstructor() {
                 }
             }
@@ -44,7 +44,7 @@ public class InjectionTest {
                 assertNotNull(instance);
             }
 
-            static class InjectConstructor implements Components {
+            static class InjectConstructor implements Component {
                 private Dependency dependency;
 
                 @Inject
@@ -74,7 +74,7 @@ public class InjectionTest {
 
         @Nested
         class IllegalInjectConstructor {
-            abstract class AbstractComponent implements Components {
+            abstract class AbstractComponent implements Component {
                 @Inject
                 public AbstractComponent() {
                 }
@@ -89,7 +89,19 @@ public class InjectionTest {
             //TODO: interface
             @Test
             public void should_throw_an_exception_if_component_is_interface() {
-                assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Components.class));
+                assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Component.class));
+            }
+
+            static class MultiInjectConstructor implements Component {
+
+                @Inject
+                public MultiInjectConstructor(String name, Double value) {
+                }
+
+                @Inject
+                public MultiInjectConstructor(Dependency dependency) {
+                }
+
             }
 
             @Test
@@ -97,6 +109,10 @@ public class InjectionTest {
                 assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(MultiInjectConstructor.class));
             }
 
+            static class NoInjectConstructorNorDefaultConstructor implements Component {
+                public NoInjectConstructorNorDefaultConstructor(String name) {
+                }
+            }
 
             @Test
             public void should_throw_an_exception_if_no_inject_nor_default_constructors_provided() {
