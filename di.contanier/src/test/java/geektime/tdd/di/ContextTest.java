@@ -3,12 +3,14 @@ package geektime.tdd.di;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -41,27 +43,88 @@ public class ContextTest {
 
         @ParameterizedTest(name = "supporting {0}")
         @MethodSource
-        @Disabled
         public void should_bing_type_to_an_injectable_component(Class<? extends Component> componentType) {
-            Component instance = new Component() {
+            Dependency dependency = new Dependency() {
             };
+            config.bind(Dependency.class, dependency);
+            config.bind(Component.class, componentType);
 
-            config.bind(Component.class, instance);
+            Optional<Component> component = config.getContext().get(Component.class);
 
-            assertSame(instance, config.getContext().get(Component.class).get());
+            assertTrue(component.isPresent());
+            assertSame(dependency, component.get().dependency());
         }
 
         public static Stream<Arguments> should_bing_type_to_an_injectable_component() {
             return Stream.of(
-                Arguments.of("constructor"),
-                Arguments.of("field"),
-                Arguments.of("method")
+                Arguments.of(Named.of("Constructor Injection", ConstructorInjection.class)),
+                Arguments.of(Named.of("Field Injection", FieldInjection.class)),
+                Arguments.of(Named.of("Method Injection", MethodInjection.class))
             );
+        }
+
+        static class ConstructorInjection implements Component {
+            private Dependency dependency;
+
+            @Inject
+            public ConstructorInjection(Dependency dependency) {
+                this.dependency = dependency;
+            }
+
+            public Dependency getDependency() {
+                return dependency;
+            }
+
+            @Override
+            public Dependency dependency() {
+                return dependency;
+            }
+        }
+
+        static class FieldInjection implements Component {
+            @Inject
+            Dependency dependency;
+
+            @Override
+            public Dependency dependency() {
+                return dependency;
+            }
+        }
+
+        static class MethodInjection implements Component {
+            private Dependency dependency;
+
+            @Inject
+            void install(Dependency dependency) {
+                this.dependency = dependency;
+            }
+
+            @Override
+            public Dependency dependency() {
+                return dependency;
+            }
+        }
+
+        @Test
+        public void should_retrieve_empty_for_unbind_type(){
+            Optional<Component> component = config.getContext().get(Component.class);
+            assertTrue(component.isEmpty());
         }
     }
 
     @Nested
     public class DependencyCheck {
+
+        @Test
+        public void should_throw_an_exception_if_dependency_not_found() {
+            config.bind(Component.class, ComponentWithInjectConstructor.class);
+
+            DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
+
+            assertEquals(Dependency.class, exception.getDependency());
+            assertEquals(Component.class, exception.getComponent());
+
+        }
 
         static class ComponentWithInjectConstructor implements Component {
             private Dependency dependency;
@@ -106,17 +169,6 @@ public class ContextTest {
             public AnotherDependencyDependedOnComponent(Component component) {
                 this.component = component;
             }
-        }
-
-        @Test
-        public void should_throw_an_exception_if_dependency_not_found() {
-            config.bind(Component.class, ComponentWithInjectConstructor.class);
-
-            DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
-
-            assertEquals(Dependency.class, exception.getDependency());
-            assertEquals(Component.class, exception.getComponent());
-
         }
 
         @Test

@@ -24,7 +24,9 @@ public class ContainerTest {
 }
 
 interface Component {
-
+    default Dependency dependency() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }
 
 interface Dependency {
