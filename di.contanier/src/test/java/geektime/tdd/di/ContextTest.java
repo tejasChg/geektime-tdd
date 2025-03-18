@@ -1,6 +1,7 @@
 package geektime.tdd.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
@@ -9,6 +10,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -107,6 +111,41 @@ public class ContextTest {
         public void should_retrieve_empty_for_unbind_type() {
             Optional<Component> component = config.getContext().get(Component.class);
             assertTrue(component.isEmpty());
+        }
+
+        //TODO could get Provider<T> from context
+        @Test
+        public void should_retrieve_bind_type_as_provider() {
+            Component instance = new Component() {
+            };
+            config.bind(Component.class, instance);
+
+            Context context = config.getContext();
+            ParameterizedType type = new TypeLiteral<Provider<Component>>() {
+            }.getType();
+
+            Provider<Component> provider = (Provider<Component>) context.get(type).get();
+            assertSame(instance,provider.get());
+        }
+
+        @Test
+        public void should_not_retrieve_bind_type_as_unsupported_container(){
+            Component instance = new Component() {
+            };
+            config.bind(Component.class, instance);
+
+            Context context = config.getContext();
+
+            ParameterizedType type = new TypeLiteral<List<Component>>() {
+            }.getType();
+
+            assertFalse(context.get(type).isPresent());
+        }
+
+        static abstract class TypeLiteral<T> {
+            public ParameterizedType getType() {
+                return (ParameterizedType) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+            }
         }
     }
 

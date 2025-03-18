@@ -14,7 +14,21 @@ public class ContainerTest {
 
     @Nested
     public class DependenciesSelection {
+        @Nested
+        public class ProviderType {
+            //Context
 
+
+            //InjectionProvider
+
+
+
+        }
+
+        @Nested
+        public class Qualifier{
+
+        }
     }
 
     @Nested

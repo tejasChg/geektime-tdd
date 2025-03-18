@@ -1,10 +1,13 @@
 package geektime.tdd.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -13,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -20,11 +24,16 @@ public class InjectionTest {
 
     private Dependency dependency = mock(Dependency.class);
 
+    private Provider<Dependency> dependencyProvider = mock(Provider.class);
+
+
     private Context context = mock(Context.class);
 
     @BeforeEach
-    void setUp() {
-        when(context.get(Dependency.class)).thenReturn(Optional.of(dependency));
+    void setUp() throws NoSuchFieldException {
+        ParameterizedType providerType = (ParameterizedType) InjectionTest.class.getDeclaredField("dependencyProvider").getGenericType();
+        when(context.get(eq(Dependency.class))).thenReturn(Optional.of(dependency));
+        when(context.get(eq(providerType))).thenReturn(Optional.of(dependencyProvider));
     }
 
     @Nested
@@ -69,6 +78,23 @@ public class InjectionTest {
             public void should_include_dependency_from_inject_constructor() {
                 InjectionProvider<InjectConstructor> provider = new InjectionProvider<>(InjectConstructor.class);
                 assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
+            }
+
+            static class ProviderInjectConstructor {
+                private Provider<Dependency> dependency;
+
+                @Inject
+                public ProviderInjectConstructor(Provider<Dependency> dependency) {
+                    this.dependency = dependency;
+                }
+            }
+
+            //TODO support inject constructor
+            @Test
+            public void should_inject_provider_via_inject_constructor() {
+                ProviderInjectConstructor instance = new InjectionProvider<>(ProviderInjectConstructor.class).get(context);
+
+                assertSame(dependencyProvider, instance.dependency);
             }
         }
 
@@ -119,56 +145,6 @@ public class InjectionTest {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(NoInjectConstructorNorDefaultConstructor.class));
             }
         }
-    }
-
-    @Nested
-    public class FieldInjection {
-        @Nested
-        class Injection {
-            static class ComponentWithFieldInjection {
-                @Inject
-                Dependency dependency;
-            }
-
-            static class SubClassWithFieldInjection extends ComponentWithFieldInjection {
-
-            }
-
-            @Test
-            public void should_inject_dependency_via_field() {
-                ComponentWithFieldInjection component = new InjectionProvider<>(ComponentWithFieldInjection.class).get(context);
-
-                assertSame(dependency, component.dependency);
-            }
-
-            @Test
-            public void should_inject_dependency_via_superclass_inject_field() {
-                SubClassWithFieldInjection component = new InjectionProvider<>(SubClassWithFieldInjection.class).get(context);
-
-                assertSame(dependency, component.dependency);
-            }
-
-            @Test
-            public void should_include_field_from_field__dependency() {
-                InjectionProvider<ComponentWithFieldInjection> provider = new InjectionProvider<>(Injection.ComponentWithFieldInjection.class);
-                assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
-            }
-        }
-
-        @Nested
-        class IllegalInjectFields {
-            //TODO throw exception if field is final
-            static class FinalInjectField {
-                @Inject
-                final Dependency dependency = null;
-            }
-
-            @Test
-            public void should_throw_exception_if_field_is_final() {
-                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(FinalInjectField.class));
-            }
-        }
-
     }
 
     @Nested
@@ -265,17 +241,32 @@ public class InjectionTest {
                 assertEquals(0, instance.superCalled);
             }
 
-            //TODO  include dependencies from inject methods
             @Test
             public void should_include_dependencies_from_inject_method() {
                 InjectionProvider<InjectMethodWithDependency> provider = new InjectionProvider<>(InjectMethodWithDependency.class);
                 assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
             }
+
+            static class ProviderInjectMethod  {
+                private Provider<Dependency> dependency;
+
+                @Inject
+                public void install(Provider<Dependency> dependency) {
+                    this.dependency = dependency;
+                }
+            }
+
+            //TODO support inject method
+            @Test
+            public void should_inject_provider_via_inject_method() {
+                ProviderInjectMethod instance = new InjectionProvider<>(ProviderInjectMethod.class).get(context);
+
+                assertSame(dependencyProvider, instance.dependency);
+            }
         }
 
         @Nested
         class IllegalInjectMethod {
-            //TODO  inject throw exception if type parameter defined
             static class InjectMethodWithTypeParameter {
                 @Inject
                 <T> void install(T t) {
@@ -288,4 +279,68 @@ public class InjectionTest {
             }
         }
     }
+
+    @Nested
+    public class FieldInjection {
+        @Nested
+        class Injection {
+            static class ComponentWithFieldInjection {
+                @Inject
+                Dependency dependency;
+            }
+
+            static class SubClassWithFieldInjection extends ComponentWithFieldInjection {
+
+            }
+
+            @Test
+            public void should_inject_dependency_via_field() {
+                ComponentWithFieldInjection component = new InjectionProvider<>(ComponentWithFieldInjection.class).get(context);
+
+                assertSame(dependency, component.dependency);
+            }
+
+            @Test
+            public void should_inject_dependency_via_superclass_inject_field() {
+                SubClassWithFieldInjection component = new InjectionProvider<>(SubClassWithFieldInjection.class).get(context);
+
+                assertSame(dependency, component.dependency);
+            }
+
+            @Test
+            public void should_include_field_from_field__dependency() {
+                InjectionProvider<ComponentWithFieldInjection> provider = new InjectionProvider<>(Injection.ComponentWithFieldInjection.class);
+                assertArrayEquals(new Class<?>[] {Dependency.class}, provider.getDependencies().toArray());
+            }
+
+
+            static class ProviderInjectField {
+                @Inject
+                private Provider<Dependency> dependency;
+            }
+
+            //TODO support inject field
+            @Test
+            public void should_inject_provider_via_inject_field() {
+                ProviderInjectField instance = new InjectionProvider<>(ProviderInjectField.class).get(context);
+
+                assertSame(dependencyProvider, instance.dependency);
+            }
+        }
+
+        @Nested
+        class IllegalInjectFields {
+            //TODO throw exception if field is final
+            static class FinalInjectField {
+                @Inject
+                final Dependency dependency = null;
+            }
+
+            @Test
+            public void should_throw_exception_if_field_is_final() {
+                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(FinalInjectField.class));
+            }
+        }
+    }
+
 }
