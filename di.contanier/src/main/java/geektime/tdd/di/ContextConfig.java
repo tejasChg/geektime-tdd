@@ -42,7 +42,7 @@ public class ContextConfig {
     }
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
-        for (Type dependency : providers.get(component).getDependencyTypes()) {
+        for (Type dependency : providers.get(component).getDependencies()) {
             if (dependency instanceof Class) {
                 checkDependency(component, visiting, (Class<?>) dependency);
             }
@@ -70,11 +70,7 @@ public class ContextConfig {
     interface ComponentProvider<T> {
         T get(Context context);
 
-        default List<Class<?>> getDependencies() {
-            return List.of();
-        }
-
-        default List<Type> getDependencyTypes() {
+        default List<Type> getDependencies() {
             return List.of();
         }
     }

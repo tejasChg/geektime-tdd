@@ -64,15 +64,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     @Override
-    public List<Class<?>> getDependencies() {
-        return concat(concat(stream(injectionConstructor.getParameterTypes()),
-                injectionFields.stream().map(Field::getType)),
-            injectionMethods.stream().flatMap(m -> stream(m.getParameterTypes())))
-            .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Type> getDependencyTypes() {
+    public List<Type> getDependencies() {
         return concat(concat(stream(injectionConstructor.getParameters()).map(Parameter::getParameterizedType), injectionFields.stream().map(Field::getGenericType)),
             injectionMethods.stream().flatMap(m -> stream(m.getParameters()).map(Parameter::getParameterizedType))).toList();
     }
@@ -115,22 +107,19 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     private static Object[] toDependencies(Context context, Executable executable) {
-        return stream(executable.getParameters()).map(p -> {
-            Type type = p.getParameterizedType();
-            if (type instanceof ParameterizedType) {
-                return context.get((ParameterizedType) type).get();
-            } else {
-                return context.get((Class<?>) type).get();
-            }
-        }).toArray(Object[]::new);
+        return stream(executable.getParameters()).map(p -> toDependency(context, p.getParameterizedType())).toArray(Object[]::new);
     }
 
     private static Object toDependency(Context context, Field field) {
-        Type genericType = field.getGenericType();
-        if (genericType instanceof ParameterizedType) {
-            return context.get((ParameterizedType) genericType).get();
+        return toDependency(context, field.getGenericType());
+    }
+
+    private static Object toDependency(Context context, Type type) {
+        if (type instanceof ParameterizedType) {
+            return context.get((ParameterizedType) type).get();
+        } else {
+            return context.get((Class<?>) type).get();
         }
-        return context.get((Class<?>) genericType).get();
     }
 
     private static <T> Constructor<T> defaultConstructor(Class<T> implementation) {
