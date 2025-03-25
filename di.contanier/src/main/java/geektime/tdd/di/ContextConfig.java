@@ -2,7 +2,6 @@ package geektime.tdd.di;
 
 import jakarta.inject.Provider;
 
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +44,16 @@ public class ContextConfig {
     }
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
-        for (Type dependency : providers.get(component).getDependencies()) {
-            Context.Ref ref = Context.Ref.of(dependency);
-            if (!providers.containsKey(ref.getComponent())) {
-                throw new DependencyNotFoundException(component, ref.getComponent());
+        for (Context.Ref dependency : providers.get(component).getDependencies()) {
+            if (!providers.containsKey(dependency.getComponent())) {
+                throw new DependencyNotFoundException(component, dependency.getComponent());
             }
-            if (!ref.isContainer()) {
-                if (visiting.contains(ref.getComponent())) {
+            if (!dependency.isContainer()) {
+                if (visiting.contains(dependency.getComponent())) {
                     throw new CycliDependencyFoundException(visiting);
                 }
-                visiting.push(ref.getComponent());
-                checkDependencies(ref.getComponent(), visiting);
+                visiting.push(dependency.getComponent());
+                checkDependencies(dependency.getComponent(), visiting);
                 visiting.pop();
             }
         }
@@ -64,9 +62,10 @@ public class ContextConfig {
     interface ComponentProvider<T> {
         T get(Context context);
 
-        default List<Type> getDependencies() {
+        default List<Context.Ref> getDependencies() {
             return List.of();
         }
+
     }
 
 }
