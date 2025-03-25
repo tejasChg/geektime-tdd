@@ -26,11 +26,7 @@ public class ContextConfig {
         providers.keySet().forEach(component -> checkDependencies(component, new Stack<>()));
         return new Context() {
             @Override
-            public Optional get(Type type) {
-                return get(Ref.of(type));
-            }
-
-            private Optional<?> get(Ref ref) {
+            public Optional<?> get(Ref ref) {
                 if (ref.isContainer()) {
                     // Step 1: Check if the raw type is Provider
                     if (ref.getContainer() != Provider.class) {
@@ -50,7 +46,7 @@ public class ContextConfig {
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
         for (Type dependency : providers.get(component).getDependencies()) {
-            Ref ref = Ref.of(dependency);
+            Context.Ref ref = Context.Ref.of(dependency);
             if (!providers.containsKey(ref.getComponent())) {
                 throw new DependencyNotFoundException(component, ref.getComponent());
             }
