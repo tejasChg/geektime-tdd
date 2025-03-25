@@ -2,7 +2,6 @@ package geektime.tdd.di;
 
 import jakarta.inject.Provider;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
@@ -28,73 +27,42 @@ public class ContextConfig {
         return new Context() {
             @Override
             public Optional get(Type type) {
-                if (isContainerType(type)) {
-                    return getContainerType((ParameterizedType) type);
-                }
-                return getComponent((Class<?>) type);
+                return get(Ref.of(type));
             }
 
-            private <Type> Optional<Type> getComponent(Class<Type> type) {
-                return Optional.ofNullable(providers.get(type)).map(provider -> (Type) provider.get(this));
+            private Optional<?> get(Ref ref) {
+                if (ref.isContainer()) {
+                    // Step 1: Check if the raw type is Provider
+                    if (ref.getContainer() != Provider.class) {
+                        return Optional.empty();
+                    }
+                    // Step 2: Extract the component type from the ParameterizedType
+                    // Step 3: Retrieve the provider for the component type
+                    return Optional.ofNullable(providers.get(ref.getComponent()))
+                        // Step 4: Wrap the provider in a Provider instance
+                        .map(provider -> (Provider<Object>) () -> provider.get(this));
+                }
+                return Optional.ofNullable(providers.get(ref.getComponent())).map(provider -> provider.get(this));
             }
 
-            private Optional getContainerType(ParameterizedType type) {
-                // Step 1: Check if the raw type is Provider
-                if (type.getRawType() != Provider.class) {
-                    return Optional.empty();
-                }
-                // Step 2: Extract the component type from the ParameterizedType
-                Class<?> componentType = getComponentType(type);
-                // Step 3: Retrieve the provider for the component type
-                return Optional.ofNullable(providers.get(componentType))
-                    // Step 4: Wrap the provider in a Provider instance
-                    .map(provider -> (Provider<Object>) () -> provider.get(this));
-            }
         };
-    }
-
-    /**
-     * Extracts the component type from a container type.
-     * For example, if the type is Provider<String>, it returns String.
-     */
-    private static Class<?> getComponentType(Type type) {
-        return (Class<?>) ((ParameterizedType) type).getActualTypeArguments()[0];
-    }
-
-    /**
-     * Checks if a type is a container type.
-     * For example, Provider<String> is a container type.
-     */
-    private static boolean isContainerType(Type type) {
-        return type instanceof ParameterizedType;
     }
 
     private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
         for (Type dependency : providers.get(component).getDependencies()) {
-            if (isContainerType(dependency)) {
-                checkContainerTypeDependency(component, dependency);
-            } else {
-                checkComponentDependency(component, visiting, (Class<?>) dependency);
+            Ref ref = Ref.of(dependency);
+            if (!providers.containsKey(ref.getComponent())) {
+                throw new DependencyNotFoundException(component, ref.getComponent());
+            }
+            if (!ref.isContainer()) {
+                if (visiting.contains(ref.getComponent())) {
+                    throw new CycliDependencyFoundException(visiting);
+                }
+                visiting.push(ref.getComponent());
+                checkDependencies(ref.getComponent(), visiting);
+                visiting.pop();
             }
         }
-    }
-
-    private void checkContainerTypeDependency(Class<?> component, Type dependency) {
-        if (!providers.containsKey(getComponentType(dependency))) {
-            throw new DependencyNotFoundException(component, getComponentType(dependency));
-        }
-    }
-
-    private void checkComponentDependency(Class<?> component, Stack<Class<?>> visiting, Class<?> dependency) {
-        if (!providers.containsKey(dependency)) {
-            throw new DependencyNotFoundException(component, dependency);
-        }
-        if (visiting.contains(dependency)) {
-            throw new CycliDependencyFoundException(visiting);
-        }
-        visiting.push(dependency);
-        checkDependencies(dependency, visiting);
-        visiting.pop();
     }
 
     interface ComponentProvider<T> {
