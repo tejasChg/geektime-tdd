@@ -28,7 +28,7 @@ public interface Context {
 
         Ref(Type type, Annotation qualifier) {
             init(type);
-            this.qualifier=qualifier;
+            this.qualifier = qualifier;
         }
 
         protected Ref() {

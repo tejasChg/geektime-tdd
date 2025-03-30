@@ -145,7 +145,6 @@ public class ContextTest {
 
         @Nested
         public class WithQualifier {
-            //TODO binding component with qualifier
             @Test
             public void should_bind_instance_with_qualifier() {
                 Component instance = new Component() {
@@ -172,7 +171,38 @@ public class ContextTest {
 
                 assertSame(dependency, chosenOne.getDependency());
             }
-            //TODO binding component with multi qualifiers
+
+            @Test
+            public void should_bind_instance_with_multi_qualifier() {
+                Component instance = new Component() {
+                };
+                config.bind(Component.class, instance, new NameLiteral("chosenOne"),new NameLiteral("skywalker"));
+
+                Context context = config.getContext();
+                Component chosenOne = context.get(Context.Ref.of(Component.class, new NameLiteral("chosenOne"))).get();
+                Component skywalker = context.get(Context.Ref.of(Component.class, new NameLiteral("skywalker"))).get();
+
+                assertSame(instance, chosenOne);
+                assertSame(instance, skywalker);
+            }
+
+            @Test
+            public void should_bind_component_with_multi_qualifier() {
+                Dependency dependency = new Dependency() {
+                };
+                config.bind(Dependency.class, dependency);
+                config.bind(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class,
+                    InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"),new NameLiteral("skywalker"));
+
+                Context context = config.getContext();
+                InjectionTest.ConstructorInjection.Injection.InjectConstructor chosenOne =
+                    context.get(Context.Ref.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"))).get();
+                InjectionTest.ConstructorInjection.Injection.InjectConstructor skywalker =
+                    context.get(Context.Ref.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("skywalker"))).get();
+
+                assertSame(dependency, chosenOne.getDependency());
+                assertSame(dependency, skywalker.getDependency());
+            }
             //TODO throw illegal component of illegal qualifier
         }
     }
