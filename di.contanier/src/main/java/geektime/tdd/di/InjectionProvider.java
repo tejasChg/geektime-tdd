@@ -64,14 +64,20 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
 
     @Override
     public List<ComponentRef> getDependencies() {
-        return concat(concat(stream(injectionConstructor.getParameters()).map(p -> getComponentRef(p)),
-                injectionFields.stream().map(Field::getGenericType).map(ComponentRef::of)),
-            injectionMethods.stream().flatMap(m -> stream(m.getParameters()).map(Parameter::getParameterizedType)).map(ComponentRef::of)).toList();
+        return concat(concat(stream(injectionConstructor.getParameters()).map(this::toComponentRef),
+                injectionFields.stream().map(this::toComponentRef)),
+            injectionMethods.stream().flatMap(m -> stream(m.getParameters()).map(this::toComponentRef))
+        ).toList();
     }
 
-    private static ComponentRef getComponentRef(Parameter p) {
-        Annotation qualifier = stream(p.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).findFirst().orElse(null);
-        return ComponentRef.of(p.getParameterizedType(), qualifier);
+    private  ComponentRef toComponentRef(Field field) {
+        Annotation qualifier = stream(field.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).findFirst().orElse(null);
+        return ComponentRef.of(field.getGenericType(),qualifier);
+    }
+
+    private  ComponentRef toComponentRef(Parameter parameter) {
+        Annotation qualifier = stream(parameter.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).findFirst().orElse(null);
+        return ComponentRef.of(parameter.getParameterizedType(), qualifier);
     }
 
     private static <T> List<Method> getInjectionMethods(Class<T> component) {
