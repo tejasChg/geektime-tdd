@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
@@ -34,20 +35,20 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
         if (Modifier.isAbstract(component.getModifiers())) {
             throw new IllegalComponentException();
         }
-        Constructor<T> constructor = getInjectConstructor(component);
-        ComponentRef[] required = stream(constructor.getParameters()).map(InjectionProvider::toComponentRef).toArray(ComponentRef<?>[]::new);
-        this.injectConstructor = new Injectable(constructor,required);
-
-        this.injectionFields = getInjectionFields(component);
+        this.injectConstructor = getInjectable(getInjectConstructor(component));
         this.injectionMethods = getInjectionMethods(component);
-
+        this.injectionFields = getInjectionFields(component);
         if (injectionFields.stream().anyMatch(f -> Modifier.isFinal(f.getModifiers()))) {
             throw new IllegalComponentException();
         }
         if (injectionMethods.stream().anyMatch(m -> m.getTypeParameters().length != 0)) {
             throw new IllegalComponentException();
         }
-        dependencies=getDependencies();
+        dependencies = getDependencies();
+    }
+
+    private <Element extends Executable> Injectable<Element> getInjectable(Element constructor) {
+        return new Injectable<>(constructor, stream(constructor.getParameters()).map(InjectionProvider::toComponentRef).toArray(ComponentRef<?>[]::new));
     }
 
     @Override
@@ -76,9 +77,9 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
         ).toList();
     }
 
-    static record Injectable<Element extends AccessibleObject>(Element element,ComponentRef<?>[] required){
+    static record Injectable<Element extends AccessibleObject>(Element element, ComponentRef<?>[] required) {
 
-        Object[] toDependencies(Context context){
+        Object[] toDependencies(Context context) {
             return stream(required).map(context::get).map(Optional::get).toArray();
         }
     }
@@ -139,7 +140,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     private static Object[] toDependencies(Context context, Executable executable) {
-        return stream(executable.getParameters()).map(p -> toDependency(context,toComponentRef(p))).toArray(Object[]::new);
+        return stream(executable.getParameters()).map(p -> toDependency(context, toComponentRef(p))).toArray(Object[]::new);
     }
 
     private static Object toDependency(Context context, Field field) {
