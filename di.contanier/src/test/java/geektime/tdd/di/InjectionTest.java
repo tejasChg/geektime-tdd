@@ -334,6 +334,7 @@ public class InjectionTest {
                 }
             }
 
+            //TODO
             @Test
             public void should_throw_exception_if_inject_method_has_type_parameter() {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(InjectMethodWithTypeParameter.class));
