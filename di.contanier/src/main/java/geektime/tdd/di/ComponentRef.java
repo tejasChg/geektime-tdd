@@ -19,25 +19,23 @@ public class ComponentRef<ComponentType> {
     }
 
     private Type container;
-    private Class<ComponentType> component;
-    private Annotation qualifier;
+    private Component component;
 
     ComponentRef(Type type, Annotation qualifier) {
-        init(type);
-        this.qualifier = qualifier;
+        init(type, qualifier);
     }
 
     protected ComponentRef() {
         Type type = ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
-        init(type);
+        init(type, null);
     }
 
-    private void init(Type type) {
+    private void init(Type type, Annotation qualifier) {
         if (type instanceof ParameterizedType container) {
             this.container = container.getRawType();
-            this.component = (Class<ComponentType>) container.getActualTypeArguments()[0];
+            this.component = new Component((Class<ComponentType>) container.getActualTypeArguments()[0], qualifier);
         } else {
-            this.component = (Class<ComponentType>) type;
+            this.component = new Component((Class<ComponentType>) type, qualifier);
         }
     }
 
@@ -45,16 +43,17 @@ public class ComponentRef<ComponentType> {
         return container;
     }
 
-    public Class<?> getComponent() {
-        return component;
-    }
-
     public boolean isContainer() {
         return container != null;
     }
 
-    public Annotation getQualifier() {
-        return qualifier;
+
+    public Class<?> componentType() {
+        return component.type();
+    }
+
+    public Component component() {
+        return component;
     }
 
     @Override
@@ -65,8 +64,8 @@ public class ComponentRef<ComponentType> {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ComponentRef componentRef = (ComponentRef) o;
-        return Objects.equals(container, componentRef.container) && component.equals(componentRef.component);
+        ComponentRef<?> that = (ComponentRef<?>) o;
+        return Objects.equals(container, that.container) && Objects.equals(component, that.component);
     }
 
     @Override
