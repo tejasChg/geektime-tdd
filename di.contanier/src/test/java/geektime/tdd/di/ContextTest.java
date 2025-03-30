@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,7 +116,6 @@ public class ContextTest {
             assertTrue(component.isEmpty());
         }
 
-        //TODO could get Provider<T> from context
         @Test
         public void should_retrieve_bind_type_as_provider() {
             Component instance = new Component() {
@@ -139,7 +139,41 @@ public class ContextTest {
 
             Context context = config.getContext();
 
-            assertFalse(context.get(new Context.Ref<List<Component>>(){}).isPresent());
+            assertFalse(context.get(new Context.Ref<List<Component>>() {
+            }).isPresent());
+        }
+
+        @Nested
+        public class WithQualifier {
+            //TODO binding component with qualifier
+            @Test
+            public void should_bind_instance_with_qualifier() {
+                Component instance = new Component() {
+                };
+                config.bind(Component.class, instance, new NameLiteral("chosenOne"));
+
+                Context context = config.getContext();
+                Component chosenOne = context.get(Context.Ref.of(Component.class, new NameLiteral("chosenOne"))).get();
+
+                assertSame(instance, chosenOne);
+            }
+
+            @Test
+            public void should_bind_component_with_qualifier() {
+                Dependency dependency = new Dependency() {
+                };
+                config.bind(Dependency.class, dependency);
+                config.bind(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class,
+                    InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"));
+
+                Context context = config.getContext();
+                InjectionTest.ConstructorInjection.Injection.InjectConstructor chosenOne =
+                    context.get(Context.Ref.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"))).get();
+
+                assertSame(dependency, chosenOne.getDependency());
+            }
+            //TODO binding component with multi qualifiers
+            //TODO throw illegal component of illegal qualifier
         }
     }
 
@@ -339,20 +373,34 @@ public class ContextTest {
             }
         }
 
-        static class CyclicDependencyProviderConstructor implements Dependency{
+        static class CyclicDependencyProviderConstructor implements Dependency {
             @Inject
             public CyclicDependencyProviderConstructor(Provider<Component> component) {
             }
         }
 
         @Test
-        public void should_not_throw_exception_if_cyclic_dependency_via_provider(){
-            config.bind(Component.class,CyclicComponentInjectConstructor.class);
-            config.bind(Dependency.class,CyclicDependencyProviderConstructor.class);
+        public void should_not_throw_exception_if_cyclic_dependency_via_provider() {
+            config.bind(Component.class, CyclicComponentInjectConstructor.class);
+            config.bind(Dependency.class, CyclicDependencyProviderConstructor.class);
 
             Context context = config.getContext();
             assertTrue(context.get(Context.Ref.of(Component.class)).isPresent());
             assertTrue(context.get(Context.Ref.of(Dependency.class)).isPresent());
         }
+    }
+}
+
+record NameLiteral(String value) implements jakarta.inject.Named {
+
+
+    @Override
+    public Class<? extends Annotation> annotationType() {
+        return null;
+    }
+
+    @Override
+    public String value() {
+        return value;
     }
 }
