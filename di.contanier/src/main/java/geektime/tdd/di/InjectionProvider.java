@@ -27,6 +27,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     private Constructor<T> injectionConstructor;
     private List<Field> injectionFields;
     private List<Method> injectionMethods;
+    private List<ComponentRef> dependencies;
 
     public InjectionProvider(Class<T> component) {
         if (Modifier.isAbstract(component.getModifiers())) {
@@ -42,6 +43,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
         if (injectionMethods.stream().anyMatch(m -> m.getTypeParameters().length != 0)) {
             throw new IllegalComponentException();
         }
+        dependencies=getDependencies();
     }
 
     @Override
@@ -70,14 +72,20 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
         ).toList();
     }
 
-    private  ComponentRef toComponentRef(Field field) {
-        Annotation qualifier = stream(field.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).findFirst().orElse(null);
-        return ComponentRef.of(field.getGenericType(),qualifier);
+    private ComponentRef toComponentRef(Field field) {
+        return ComponentRef.of(field.getGenericType(), getQualifier(field));
     }
 
-    private  ComponentRef toComponentRef(Parameter parameter) {
-        Annotation qualifier = stream(parameter.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).findFirst().orElse(null);
-        return ComponentRef.of(parameter.getParameterizedType(), qualifier);
+    private ComponentRef toComponentRef(Parameter parameter) {
+        return ComponentRef.of(parameter.getParameterizedType(), getQualifier(parameter));
+    }
+
+    private static Annotation getQualifier(AnnotatedElement element) {
+        List<Annotation> annotations = stream(element.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).toList();
+        if (annotations.size() > 1) {
+            throw new IllegalComponentException();
+        }
+        return annotations.stream().findFirst().orElse(null);
     }
 
     private static <T> List<Method> getInjectionMethods(Class<T> component) {
@@ -118,15 +126,15 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     private static Object[] toDependencies(Context context, Executable executable) {
-        return stream(executable.getParameters()).map(p -> toDependency(context, p.getParameterizedType())).toArray(Object[]::new);
+        return stream(executable.getParameters()).map(p -> toDependency(context, p.getParameterizedType(), getQualifier(p))).toArray(Object[]::new);
     }
 
     private static Object toDependency(Context context, Field field) {
-        return toDependency(context, field.getGenericType());
+        return toDependency(context, field.getGenericType(), getQualifier(field));
     }
 
-    private static Object toDependency(Context context, Type type) {
-        return context.get(ComponentRef.of(type)).get();
+    private static Object toDependency(Context context, Type type, Annotation qualifier) {
+        return context.get(ComponentRef.of(type, qualifier)).get();
     }
 
     private static <T> Constructor<T> defaultConstructor(Class<T> implementation) {
