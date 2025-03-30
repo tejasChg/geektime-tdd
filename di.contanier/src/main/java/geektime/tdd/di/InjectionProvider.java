@@ -12,7 +12,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,26 +65,10 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
 
     @Override
     public List<ComponentRef> getDependencies() {
-        return concat(concat(stream(injectionConstructor.getParameters()).map(this::toComponentRef),
-                injectionFields.stream().map(this::toComponentRef)),
-            injectionMethods.stream().flatMap(m -> stream(m.getParameters()).map(this::toComponentRef))
+        return concat(concat(stream(injectionConstructor.getParameters()).map(InjectionProvider::toComponentRef),
+                injectionFields.stream().map(InjectionProvider::toComponentRef)),
+            injectionMethods.stream().flatMap(m -> stream(m.getParameters()).map(InjectionProvider::toComponentRef))
         ).toList();
-    }
-
-    private ComponentRef toComponentRef(Field field) {
-        return ComponentRef.of(field.getGenericType(), getQualifier(field));
-    }
-
-    private ComponentRef toComponentRef(Parameter parameter) {
-        return ComponentRef.of(parameter.getParameterizedType(), getQualifier(parameter));
-    }
-
-    private static Annotation getQualifier(AnnotatedElement element) {
-        List<Annotation> annotations = stream(element.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).toList();
-        if (annotations.size() > 1) {
-            throw new IllegalComponentException();
-        }
-        return annotations.stream().findFirst().orElse(null);
     }
 
     private static <T> List<Method> getInjectionMethods(Class<T> component) {
@@ -125,18 +108,6 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
         return injectMethods.stream().noneMatch(o -> isOverride(m, o));
     }
 
-    private static Object[] toDependencies(Context context, Executable executable) {
-        return stream(executable.getParameters()).map(p -> toDependency(context, p.getParameterizedType(), getQualifier(p))).toArray(Object[]::new);
-    }
-
-    private static Object toDependency(Context context, Field field) {
-        return toDependency(context, field.getGenericType(), getQualifier(field));
-    }
-
-    private static Object toDependency(Context context, Type type, Annotation qualifier) {
-        return context.get(ComponentRef.of(type, qualifier)).get();
-    }
-
     private static <T> Constructor<T> defaultConstructor(Class<T> implementation) {
         try {
             return implementation.getDeclaredConstructor();
@@ -153,6 +124,34 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
             current = current.getSuperclass();
         }
         return members;
+    }
+
+    private static Object[] toDependencies(Context context, Executable executable) {
+        return stream(executable.getParameters()).map(p -> toDependency(context,toComponentRef(p))).toArray(Object[]::new);
+    }
+
+    private static Object toDependency(Context context, Field field) {
+        return toDependency(context, toComponentRef(field));
+    }
+
+    private static Object toDependency(Context context, ComponentRef ref) {
+        return context.get(ref).get();
+    }
+
+    private static ComponentRef toComponentRef(Field field) {
+        return ComponentRef.of(field.getGenericType(), getQualifier(field));
+    }
+
+    private static ComponentRef toComponentRef(Parameter parameter) {
+        return ComponentRef.of(parameter.getParameterizedType(), getQualifier(parameter));
+    }
+
+    private static Annotation getQualifier(AnnotatedElement element) {
+        List<Annotation> annotations = stream(element.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).toList();
+        if (annotations.size() > 1) {
+            throw new IllegalComponentException();
+        }
+        return annotations.stream().findFirst().orElse(null);
     }
 }
 
