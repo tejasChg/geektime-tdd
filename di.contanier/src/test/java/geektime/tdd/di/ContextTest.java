@@ -1,7 +1,9 @@
 package geektime.tdd.di;
 
+import geektime.tdd.di.InjectionTest.ConstructorInjection.Injection.InjectConstructor;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
+import jakarta.inject.Qualifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
@@ -11,6 +13,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -145,41 +152,14 @@ public class ContextTest {
         @Nested
         public class WithQualifier {
             @Test
-            public void should_bind_instance_with_qualifier() {
-                TestComponent instance = new TestComponent() {
-                };
-                config.bind(TestComponent.class, instance, new NameLiteral("chosenOne"));
-
-                Context context = config.getContext();
-                TestComponent chosenOne = context.get(ComponentRef.of(TestComponent.class, new NameLiteral("chosenOne"))).get();
-
-                assertSame(instance, chosenOne);
-            }
-
-            @Test
-            public void should_bind_component_with_qualifier() {
-                Dependency dependency = new Dependency() {
-                };
-                config.bind(Dependency.class, dependency);
-                config.bind(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class,
-                    InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"));
-
-                Context context = config.getContext();
-                InjectionTest.ConstructorInjection.Injection.InjectConstructor chosenOne =
-                    context.get(ComponentRef.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"))).get();
-
-                assertSame(dependency, chosenOne.getDependency());
-            }
-
-            @Test
             public void should_bind_instance_with_multi_qualifier() {
                 TestComponent instance = new TestComponent() {
                 };
-                config.bind(TestComponent.class, instance, new NameLiteral("chosenOne"),new NameLiteral("skywalker"));
+                config.bind(TestComponent.class, instance, new NameLiteral("chosenOne"), new SkywalkerLiteral());
 
                 Context context = config.getContext();
                 TestComponent chosenOne = context.get(ComponentRef.of(TestComponent.class, new NameLiteral("chosenOne"))).get();
-                TestComponent skywalker = context.get(ComponentRef.of(TestComponent.class, new NameLiteral("skywalker"))).get();
+                TestComponent skywalker = context.get(ComponentRef.of(TestComponent.class, new SkywalkerLiteral())).get();
 
                 assertSame(instance, chosenOne);
                 assertSame(instance, skywalker);
@@ -190,19 +170,30 @@ public class ContextTest {
                 Dependency dependency = new Dependency() {
                 };
                 config.bind(Dependency.class, dependency);
-                config.bind(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class,
-                    InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"),new NameLiteral("skywalker"));
+                config.bind(InjectConstructor.class,
+                    InjectConstructor.class, new NameLiteral("chosenOne"), new SkywalkerLiteral());
 
                 Context context = config.getContext();
-                InjectionTest.ConstructorInjection.Injection.InjectConstructor chosenOne =
-                    context.get(ComponentRef.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("chosenOne"))).get();
-                InjectionTest.ConstructorInjection.Injection.InjectConstructor skywalker =
-                    context.get(ComponentRef.of(InjectionTest.ConstructorInjection.Injection.InjectConstructor.class, new NameLiteral("skywalker"))).get();
+                InjectConstructor chosenOne =
+                    context.get(ComponentRef.of(InjectConstructor.class, new NameLiteral("chosenOne"))).get();
+                InjectConstructor skywalker =
+                    context.get(ComponentRef.of(InjectConstructor.class, new SkywalkerLiteral())).get();
 
                 assertSame(dependency, chosenOne.getDependency());
                 assertSame(dependency, skywalker.getDependency());
             }
-            //TODO throw illegal component of illegal qualifier
+
+            @Test
+            public void should_throw_exception_if_illegal_qualifier_given_to_instance() {
+                TestComponent instance = new TestComponent() {
+                };
+                assertThrows(IllegalComponentException.class, () -> config.bind(TestComponent.class, instance, new TestLiteral()));
+            }
+
+            @Test
+            public void should_throw_exception_if_illegal_qualifier_given_to_component() {
+                assertThrows(IllegalComponentException.class, () -> config.bind(InjectConstructor.class, InjectConstructor.class, new TestLiteral()));
+            }
         }
     }
 
@@ -421,15 +412,30 @@ public class ContextTest {
 }
 
 record NameLiteral(String value) implements jakarta.inject.Named {
+    @Override
+    public Class<? extends Annotation> annotationType() {
+        return jakarta.inject.Named.class;
+    }
+}
 
+@Qualifier
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@interface Skywalker {
+}
+
+record SkywalkerLiteral() implements Skywalker {
 
     @Override
     public Class<? extends Annotation> annotationType() {
-        return null;
+        return Skywalker.class;
     }
+}
+
+record TestLiteral() implements Test {
 
     @Override
-    public String value() {
-        return value;
+    public Class<? extends Annotation> annotationType() {
+        return Test.class;
     }
 }
