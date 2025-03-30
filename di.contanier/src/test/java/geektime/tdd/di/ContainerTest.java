@@ -37,7 +37,7 @@ public class ContainerTest {
     }
 }
 
-interface Component {
+interface TestComponent {
     default Dependency dependency() {
         throw new UnsupportedOperationException("Not implemented");
     }
