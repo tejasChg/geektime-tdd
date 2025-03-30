@@ -25,38 +25,32 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Stream.concat;
 
 class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
-    private List<Field> injectionFields;
-    private List<ComponentRef> dependencies;
     private Injectable<Constructor<T>> injectConstructor;
     private List<Injectable<Method>> injectMethods;
+    private List<Injectable<Field>> injectFields;
 
     public InjectionProvider(Class<T> component) {
         if (Modifier.isAbstract(component.getModifiers())) {
             throw new IllegalComponentException();
         }
-        this.injectConstructor = getInjectable(getInjectConstructor(component));
-        this.injectMethods = getInjectionMethods(component).stream().map(m->getInjectable(m)).toList();
-        this.injectionFields = getInjectionFields(component);
-        if (injectionFields.stream().anyMatch(f -> Modifier.isFinal(f.getModifiers()))) {
+        this.injectConstructor = Injectable.of(getInjectConstructor(component));
+        this.injectMethods = getInjectionMethods(component).stream().map(m -> Injectable.of(m)).toList();
+        this.injectFields = getInjectionFields(component).stream().map(f -> Injectable.of(f)).toList();
+        if (injectFields.stream().map(Injectable::element).anyMatch(f -> Modifier.isFinal(f.getModifiers()))) {
             throw new IllegalComponentException();
         }
         if (injectMethods.stream().map(Injectable::element).anyMatch(m -> m.getTypeParameters().length != 0)) {
             throw new IllegalComponentException();
         }
-        dependencies = getDependencies();
-    }
-
-    private <Element extends Executable> Injectable<Element> getInjectable(Element constructor) {
-        return new Injectable<>(constructor, stream(constructor.getParameters()).map(InjectionProvider::toComponentRef).toArray(ComponentRef<?>[]::new));
     }
 
     @Override
     public T get(Context context) {
         try {
             T instance = injectConstructor.element().newInstance(injectConstructor.toDependencies(context));
-            for (Field field : injectionFields) {
-                field.setAccessible(true);
-                field.set(instance, toDependency(context, field));
+            for (Injectable<Field>  field : injectFields) {
+                field.element().setAccessible(true);
+                field.element().set(instance, field.toDependencies(context)[0]);
             }
             for (Injectable<Method> method : injectMethods) {
                 method.element().invoke(instance, method.toDependencies(context));
@@ -68,14 +62,21 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     @Override
-    public List<ComponentRef> getDependencies() {
+    public List<ComponentRef<?>> getDependencies() {
         return concat(concat(stream(injectConstructor.required()),
-                injectionFields.stream().map(InjectionProvider::toComponentRef)),
-            injectMethods.stream().flatMap(m-> stream(m.required))
-        ).toList();
+            injectFields.stream().flatMap(f -> stream(f.required()))),
+            injectMethods.stream().flatMap(m -> stream(m.required()))).toList();
     }
 
     static record Injectable<Element extends AccessibleObject>(Element element, ComponentRef<?>[] required) {
+
+        static <Element extends Executable> Injectable<Element> of(Element constructor) {
+            return new Injectable<>(constructor, stream(constructor.getParameters()).map(InjectionProvider::toComponentRef).toArray(ComponentRef[]::new));
+        }
+
+        static Injectable<Field> of(Field field) {
+            return new Injectable<>(field,new ComponentRef[]{toComponentRef(field)});
+        }
 
         Object[] toDependencies(Context context) {
             return stream(required).map(context::get).map(Optional::get).toArray();
@@ -135,14 +136,6 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
             current = current.getSuperclass();
         }
         return members;
-    }
-
-    private static Object toDependency(Context context, Field field) {
-        return toDependency(context, toComponentRef(field));
-    }
-
-    private static Object toDependency(Context context, ComponentRef ref) {
-        return context.get(ref).get();
     }
 
     private static ComponentRef toComponentRef(Field field) {
