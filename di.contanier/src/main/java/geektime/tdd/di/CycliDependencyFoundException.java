@@ -1,17 +1,17 @@
 package geektime.tdd.di;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 
 public class CycliDependencyFoundException extends RuntimeException {
-    private Set<Class<?>> components = new HashSet<>();
+    private Set<Component> components = new HashSet<>();
 
-    public CycliDependencyFoundException(Stack<Class<?>> visiting) {
+    public CycliDependencyFoundException(List<Component> visiting) {
         components.addAll(visiting);
     }
 
-    public Set<Class<?>> getComponents() {
-        return components;
+    public Class<?>[] getComponents() {
+        return components.stream().map(Component::type).toArray(Class[]::new);
     }
 }
