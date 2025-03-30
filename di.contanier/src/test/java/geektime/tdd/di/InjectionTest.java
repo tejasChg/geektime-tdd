@@ -1,6 +1,7 @@
 package geektime.tdd.di;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -24,7 +25,7 @@ public class InjectionTest {
     private Dependency dependency = mock(Dependency.class);
 
     private Provider<Dependency> dependencyProvider = mock(Provider.class);
-    private ParameterizedType dependencyProviderType ;
+    private ParameterizedType dependencyProviderType;
 
     private Context context = mock(Context.class);
 
@@ -76,13 +77,13 @@ public class InjectionTest {
             @Test
             public void should_include_dependency_from_inject_constructor() {
                 InjectionProvider<InjectConstructor> provider = new InjectionProvider<>(InjectConstructor.class);
-                assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class)}, provider.getDependencies().toArray());
+                assertArrayEquals(new ComponentRef[] {ComponentRef.of(Dependency.class)}, provider.getDependencies().toArray());
             }
 
             @Test
-            public void should_include_provider_type_from_inject_constructor(){
+            public void should_include_provider_type_from_inject_constructor() {
                 InjectionProvider<ProviderInjectConstructor> provider = new InjectionProvider<>(ProviderInjectConstructor.class);
-                assertArrayEquals(new ComponentRef[]{ComponentRef.of(dependencyProviderType)}, provider.getDependencies().toArray());
+                assertArrayEquals(new ComponentRef[] {ComponentRef.of(dependencyProviderType)}, provider.getDependencies().toArray());
             }
 
             static class ProviderInjectConstructor {
@@ -150,6 +151,26 @@ public class InjectionTest {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(NoInjectConstructorNorDefaultConstructor.class));
             }
         }
+
+        @Nested
+        class WithQualifier {
+            //TODO inject with qualifier
+            //TODO include qualifier with dependency
+            static class InjectConstructor {
+                @Inject
+                public InjectConstructor(@Named("ChosenOne") Dependency dependency) {
+                }
+            }
+
+            @Test
+            public void should_include_qualifier_with_dependency() {
+                InjectionProvider<InjectConstructor> provider = new InjectionProvider<>(InjectConstructor.class);
+
+                assertArrayEquals(new ComponentRef<?>[] {ComponentRef.of(Dependency.class, new NameLiteral("ChosenOne"))},
+                    provider.getDependencies().toArray());
+            }
+            //TODO throw illegal component if illegal qualifier given to injection point
+        }
     }
 
     @Nested
@@ -192,7 +213,7 @@ public class InjectionTest {
 
             //TODO include dependency type from inject method
             @Test
-            public void should_include_provider_type_from_inject_method(){
+            public void should_include_provider_type_from_inject_method() {
                 InjectionProvider<ProviderInjectMethod> provider = new InjectionProvider<>(ProviderInjectMethod.class);
                 assertArrayEquals(new ComponentRef[] {ComponentRef.of(dependencyProviderType)}, provider.getDependencies().toArray());
             }
@@ -258,7 +279,7 @@ public class InjectionTest {
                 assertArrayEquals(new ComponentRef[] {ComponentRef.of(Dependency.class)}, provider.getDependencies().toArray());
             }
 
-            static class ProviderInjectMethod  {
+            static class ProviderInjectMethod {
                 private Provider<Dependency> dependency;
 
                 @Inject
@@ -320,7 +341,7 @@ public class InjectionTest {
 
             //TODO include dependency type from inject field
             @Test
-            public void should_include_provider_type_from_inject_field(){
+            public void should_include_provider_type_from_inject_field() {
                 InjectionProvider<ProviderInjectField> provider = new InjectionProvider<>(ProviderInjectField.class);
                 assertArrayEquals(new ComponentRef[] {ComponentRef.of(dependencyProviderType)}, provider.getDependencies().toArray());
             }
