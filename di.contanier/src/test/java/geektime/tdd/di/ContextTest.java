@@ -3,7 +3,6 @@ package geektime.tdd.di;
 import geektime.tdd.di.InjectionTest.ConstructorInjection.Injection.InjectConstructor;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
-import jakarta.inject.Qualifier;
 import jakarta.inject.Singleton;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
@@ -13,17 +12,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.lang.annotation.Annotation;
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -244,7 +240,7 @@ public class ContextTest {
 
             //TODO get scope from component class
             @Singleton
-            static class SingletonAnnotated implements Dependency{
+            static class SingletonAnnotated implements Dependency {
 
             }
 
@@ -256,8 +252,18 @@ public class ContextTest {
 
                 assertSame(context.get(ComponentRef.of(Dependency.class)).get(), context.get(ComponentRef.of(Dependency.class)).get());
             }
-            //TODO get scope from component with qualifiers
-            //TODO bind component with customize scope annotation
+
+            @Test
+            public void should_bind_component_as_customized_scope(){
+                config.scope(Pooled.class,PooledProvider::new);
+                config.bind(NotSingleton.class, NotSingleton.class, new PooledLiteral());
+
+                Context context = config.getContext();
+
+                List<NotSingleton> instances = IntStream.range(0, 5).mapToObj(i -> context.get(ComponentRef.of(NotSingleton.class)).get()).toList();
+
+                assertEquals(PooledProvider.MAX,new HashSet<>(instances).size());
+            }
 
             @Nested
             public class WithQualifier {
@@ -311,7 +317,10 @@ public class ContextTest {
                 Arguments.of(Named.of("Inject Method", MissingDependencyMethod.class)),
                 Arguments.of(Named.of("Provider in Inject Constructor", MissingDependencyProviderConstructor.class)),
                 Arguments.of(Named.of("Provider in Inject Field", MissingDependencyProviderField.class)),
-                Arguments.of(Named.of("Provider in Inject Method", MissingDependencyProviderMethod.class)));
+                Arguments.of(Named.of("Provider in Inject Method", MissingDependencyProviderMethod.class)),
+                Arguments.of(Named.of("Scoped", MissingDependencyScoped.class)),
+                Arguments.of(Named.of("Scoped Provider", MissingDependencyProviderScoped.class))
+            );
         }
 
         static class MissingDependencyConstructor implements TestComponent {
@@ -346,6 +355,18 @@ public class ContextTest {
             @Inject
             void install(Provider<Dependency> dependency) {
             }
+        }
+
+        @Singleton
+        static class MissingDependencyScoped implements TestComponent {
+            @Inject
+            Dependency dependency;
+        }
+
+        @Singleton
+        static class MissingDependencyProviderScoped implements TestComponent {
+            @Inject
+            Provider<Dependency> dependency;
         }
 
         @ParameterizedTest(name = "cyclic dependency between {0} and {1}")
@@ -416,6 +437,8 @@ public class ContextTest {
             }
             return arguments.stream();
         }
+
+        //TODO cyclic dependencies with scope
 
         static class CyclicTestComponentInjectConstructor implements TestComponent {
             @Inject
@@ -632,60 +655,5 @@ public class ContextTest {
                 }
             }
         }
-    }
-}
-
-record NameLiteral(String value) implements jakarta.inject.Named {
-    @Override
-    public Class<? extends Annotation> annotationType() {
-        return jakarta.inject.Named.class;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o instanceof jakarta.inject.Named named) {
-            return Objects.equals(value, named.value());
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return "value".hashCode() * 127 ^ value.hashCode();
-    }
-}
-
-@Qualifier
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-@interface Skywalker {
-}
-
-record SkywalkerLiteral() implements Skywalker {
-
-    @Override
-    public Class<? extends Annotation> annotationType() {
-        return Skywalker.class;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return o instanceof Skywalker;
-    }
-}
-
-record TestLiteral() implements Test {
-
-    @Override
-    public Class<? extends Annotation> annotationType() {
-        return Test.class;
-    }
-}
-
-record SingletonLiteral() implements Singleton {
-
-    @Override
-    public Class<? extends Annotation> annotationType() {
-        return Singleton.class;
     }
 }

@@ -113,13 +113,11 @@ public class InjectionTest {
                 }
             }
 
-            //TODO: abstract class
             @Test
             public void should_throw_an_exception_if_component_is_abstract() {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(AbstractTestComponent.class));
             }
 
-            //TODO: interface
             @Test
             public void should_throw_an_exception_if_component_is_interface() {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(TestComponent.class));
@@ -162,8 +160,6 @@ public class InjectionTest {
                 when(context.get(eq(ComponentRef.of(Dependency.class, new NameLiteral("ChosenOne"))))).thenReturn(Optional.of(dependency));
             }
 
-            //TODO inject with qualifier
-            //TODO include qualifier with dependency
             static class InjectConstructor {
                 Dependency dependency;
 
@@ -334,7 +330,6 @@ public class InjectionTest {
                 }
             }
 
-            //TODO
             @Test
             public void should_throw_exception_if_inject_method_has_type_parameter() {
                 assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(InjectMethodWithTypeParameter.class));

@@ -3,6 +3,7 @@ package geektime.tdd.di;
 import jakarta.inject.Provider;
 import jakarta.inject.Qualifier;
 import jakarta.inject.Scope;
+import jakarta.inject.Singleton;
 
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
@@ -12,12 +13,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 
 public class ContextConfig {
 
     private Map<Component, ComponentProvider<?>> components = new HashMap<>();
+    private Map<Class<?>, Function<ComponentProvider<?>, ComponentProvider<?>>> scopes = new HashMap<>();
+
+    public ContextConfig() {
+        scope(Singleton.class, SingletonProvider::new);
+    }
 
     public <Type> void bind(Class<Type> type, Type instance) {
         components.put(new Component(type, null), context -> instance);
@@ -48,7 +54,7 @@ public class ContextConfig {
         ComponentProvider<Implementation> injectionProvider = new InjectionProvider<>(implementation);
 
         ComponentProvider<Implementation> provider =
-            scope.map(s -> (ComponentProvider<Implementation>) new SingletonProvider<>(injectionProvider)).orElse(injectionProvider);
+            scope.map(s -> (ComponentProvider<Implementation>) getScopeProvider(s, injectionProvider)).orElse(injectionProvider);
 
         if (qualifiers.isEmpty()) {
             components.put(new Component(type, null), provider);
@@ -56,6 +62,14 @@ public class ContextConfig {
         for (Annotation qualifier : qualifiers) {
             components.put(new Component(type, qualifier), provider);
         }
+    }
+
+    private ComponentProvider<?> getScopeProvider(Annotation scope, ComponentProvider<?> provider) {
+        return scopes.get(scope.annotationType()).apply(provider);
+    }
+
+    public <ScopeType extends Annotation> void scope(Class<ScopeType> scope, Function<ComponentProvider<?>, ComponentProvider<?>> provider) {
+        scopes.put(scope, provider);
     }
 
     static class SingletonProvider<T> implements ComponentProvider<T> {
@@ -73,6 +87,11 @@ public class ContextConfig {
                 singleton = provider.get(context);
             }
             return singleton;
+        }
+
+        @Override
+        public List<ComponentRef<?>> getDependencies() {
+            return provider.getDependencies();
         }
     }
 
