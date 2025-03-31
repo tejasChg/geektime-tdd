@@ -1,4 +1,3 @@
 package geektime.tdd.di;
 
-public class IllegalComponentException extends RuntimeException {
-}
+public class IllegalComponentException extends RuntimeException {}

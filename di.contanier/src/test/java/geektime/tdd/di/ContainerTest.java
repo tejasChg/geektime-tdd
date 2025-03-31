@@ -16,25 +16,18 @@ public class ContainerTest {
     public class DependenciesSelection {
         @Nested
         public class ProviderType {
-            //Context
+            // Context
 
-
-            //InjectionProvider
-
-
+            // InjectionProvider
 
         }
 
         @Nested
-        public class Qualifier{
-
-        }
+        public class Qualifier {}
     }
 
     @Nested
-    public class LifecycleManagement {
-
-    }
+    public class LifecycleManagement {}
 }
 
 interface TestComponent {
@@ -43,10 +36,6 @@ interface TestComponent {
     }
 }
 
-interface Dependency {
+interface Dependency {}
 
-}
-
-interface AnotherDependency {
-
-}
+interface AnotherDependency {}

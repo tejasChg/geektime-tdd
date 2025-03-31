@@ -1,11 +1,8 @@
 package geektime.tdd.di;
 
-
 import jakarta.inject.Qualifier;
 import jakarta.inject.Scope;
 import jakarta.inject.Singleton;
-import org.junit.jupiter.api.Test;
-
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -13,6 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.junit.jupiter.api.Test;
 
 record NameLiteral(String value) implements jakarta.inject.Named {
     @Override
@@ -34,11 +32,9 @@ record NameLiteral(String value) implements jakarta.inject.Named {
     }
 }
 
-@Qualifier
-@Retention(RetentionPolicy.RUNTIME)
+@Qualifier @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@interface Skywalker {
-}
+@interface Skywalker {}
 
 record SkywalkerLiteral() implements Skywalker {
 
@@ -72,8 +68,7 @@ record SingletonLiteral() implements Singleton {
 @Scope
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@interface Pooled {
-}
+@interface Pooled {}
 
 record PooledLiteral() implements Pooled {
 

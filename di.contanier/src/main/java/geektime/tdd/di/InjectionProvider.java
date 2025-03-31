@@ -1,8 +1,10 @@
 package geektime.tdd.di;
 
+import static java.util.Arrays.stream;
+import static java.util.stream.Stream.concat;
+
 import jakarta.inject.Inject;
 import jakarta.inject.Qualifier;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
@@ -20,9 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
-
-import static java.util.Arrays.stream;
-import static java.util.stream.Stream.concat;
 
 class InjectionProvider<T> implements ComponentProvider<T> {
     private Injectable<Constructor<T>> injectConstructor;
@@ -64,13 +63,18 @@ class InjectionProvider<T> implements ComponentProvider<T> {
     @Override
     public List<ComponentRef<?>> getDependencies() {
         return concat(concat(Stream.of(injectConstructor), injectFields.stream()), injectMethods.stream())
-            .flatMap(i -> stream(i.required())).toList();
+                .flatMap(i -> stream(i.required()))
+                .toList();
     }
 
     static record Injectable<Element extends AccessibleObject>(Element element, ComponentRef<?>[] required) {
 
         static <Element extends Executable> Injectable<Element> of(Element constructor) {
-            return new Injectable<>(constructor, stream(constructor.getParameters()).map(Injectable::toComponentRef).toArray(ComponentRef[]::new));
+            return new Injectable<>(
+                    constructor,
+                    stream(constructor.getParameters())
+                            .map(Injectable::toComponentRef)
+                            .toArray(ComponentRef[]::new));
         }
 
         static Injectable<Field> of(Field field) {
@@ -90,7 +94,9 @@ class InjectionProvider<T> implements ComponentProvider<T> {
         }
 
         private static Annotation getQualifier(AnnotatedElement element) {
-            List<Annotation> annotations = stream(element.getAnnotations()).filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class)).toList();
+            List<Annotation> annotations = stream(element.getAnnotations())
+                    .filter(q -> q.annotationType().isAnnotationPresent(Qualifier.class))
+                    .toList();
             if (annotations.size() > 1) {
                 throw new IllegalComponentException();
             }
@@ -99,26 +105,32 @@ class InjectionProvider<T> implements ComponentProvider<T> {
     }
 
     private static <T> Injectable<Constructor<T>> getInjectConstructor(Class<T> component) {
-        List<Constructor<?>> injectConstructors = injectable(component.getConstructors()).toList();
+        List<Constructor<?>> injectConstructors =
+                injectable(component.getConstructors()).toList();
         if (injectConstructors.size() > 1) {
             throw new IllegalComponentException();
         }
-        return Injectable.of((Constructor<T>) injectConstructors.stream().findFirst().orElseGet(() -> defaultConstructor(component)));
+        return Injectable.of((Constructor<T>)
+                injectConstructors.stream().findFirst().orElseGet(() -> defaultConstructor(component)));
     }
 
     private static <T> List<Injectable<Method>> getInjectMethods(Class<T> component) {
-        List<Method> injectMethods = traverse(component,
-            (methods, current) -> injectable(current.getDeclaredMethods()).filter(m1 -> isOverrideByInjectMethod(m1, methods)).filter(
-                    m1 -> isOverrideByNoInjectMethod(component, m1))
+        List<Method> injectMethods = traverse(component, (methods, current) -> injectable(current.getDeclaredMethods())
+                .filter(m1 -> isOverrideByInjectMethod(m1, methods))
+                .filter(m1 -> isOverrideByNoInjectMethod(component, m1))
                 .toList());
-        //!!Important ensure the superclasses' methods are injected first
+        // !!Important ensure the superclasses' methods are injected first
         Collections.reverse(injectMethods);
         return injectMethods.stream().map(m -> Injectable.of(m)).toList();
     }
 
     private static <T> List<Injectable<Field>> getInjectFields(Class<T> component) {
-        return InjectionProvider.<Field>traverse(component, (injectionFields, current) -> injectable(current.getDeclaredFields()).toList()).stream().map(f -> Injectable.of(f))
-            .toList();
+        return InjectionProvider.<Field>traverse(
+                        component, (injectionFields, current) -> injectable(current.getDeclaredFields())
+                                .toList())
+                .stream()
+                .map(f -> Injectable.of(f))
+                .toList();
     }
 
     private static boolean isOverride(Method m, Method o) {
@@ -130,7 +142,9 @@ class InjectionProvider<T> implements ComponentProvider<T> {
     }
 
     private static <T> boolean isOverrideByNoInjectMethod(Class<T> component, Method m) {
-        return stream(component.getDeclaredMethods()).filter(m1 -> !m1.isAnnotationPresent(Inject.class)).noneMatch(o -> isOverride(m, o));
+        return stream(component.getDeclaredMethods())
+                .filter(m1 -> !m1.isAnnotationPresent(Inject.class))
+                .noneMatch(o -> isOverride(m, o));
     }
 
     private static boolean isOverrideByInjectMethod(Method m, List<Method> injectMethods) {
@@ -155,4 +169,3 @@ class InjectionProvider<T> implements ComponentProvider<T> {
         return members;
     }
 }
-

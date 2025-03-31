@@ -5,6 +5,7 @@ tasks.test {
 plugins {
     `java-library`
     "jacoco"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 repositories {
     mavenCentral()
@@ -25,4 +26,17 @@ tasks.withType<Test>() {
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+spotless {
+    java {
+        palantirJavaFormat()
+        removeUnusedImports()
+        formatAnnotations()
+    }
+
+}
+
+tasks.build {
+    dependsOn(tasks.spotlessApply)
 }

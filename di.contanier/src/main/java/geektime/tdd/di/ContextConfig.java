@@ -4,7 +4,6 @@ import jakarta.inject.Provider;
 import jakarta.inject.Qualifier;
 import jakarta.inject.Scope;
 import jakarta.inject.Singleton;
-
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 
 public class ContextConfig {
 
@@ -42,25 +40,33 @@ public class ContextConfig {
         bind(type, implementation, implementation.getAnnotations());
     }
 
-    public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation, Annotation... annotations) {
-        Map<Class<?>, List<Annotation>> annotationGroups = Arrays.stream(annotations).collect(Collectors.groupingBy(this::typeOf, Collectors.toList()));
+    public <Type, Implementation extends Type> void bind(
+            Class<Type> type, Class<Implementation> implementation, Annotation... annotations) {
+        Map<Class<?>, List<Annotation>> annotationGroups =
+                Arrays.stream(annotations).collect(Collectors.groupingBy(this::typeOf, Collectors.toList()));
 
         if (annotationGroups.containsKey(Illegal.class)) {
             throw new IllegalComponentException();
         }
 
-        bind(type, annotationGroups.getOrDefault(Qualifier.class, List.of()), createScopeProvider(implementation, annotationGroups.getOrDefault(Scope.class, List.of())));
+        bind(
+                type,
+                annotationGroups.getOrDefault(Qualifier.class, List.of()),
+                createScopeProvider(implementation, annotationGroups.getOrDefault(Scope.class, List.of())));
     }
 
-    private <Type, Implementation extends Type> ComponentProvider<Implementation> createScopeProvider(Class<Implementation> implementation, List<Annotation> scopes) {
+    private <Type, Implementation extends Type> ComponentProvider<Implementation> createScopeProvider(
+            Class<Implementation> implementation, List<Annotation> scopes) {
         if (scopes.size() > 1) {
             throw new IllegalComponentException();
         }
         ComponentProvider<Implementation> injectionProvider = new InjectionProvider<>(implementation);
-        return scopes.stream().findFirst().or(() -> fromType(implementation)).map(s -> (ComponentProvider<Implementation>) getScopeProvider(s, injectionProvider))
-            .orElse(injectionProvider);
+        return scopes.stream()
+                .findFirst()
+                .or(() -> fromType(implementation))
+                .map(s -> (ComponentProvider<Implementation>) getScopeProvider(s, injectionProvider))
+                .orElse(injectionProvider);
     }
-
 
     private <Type> void bind(Class<Type> type, List<Annotation> qualifiers, ComponentProvider<?> provider) {
         if (qualifiers.isEmpty()) {
@@ -72,15 +78,19 @@ public class ContextConfig {
     }
 
     private <Implementation> Optional<Annotation> fromType(Class<Implementation> implementation) {
-        return Arrays.stream(implementation.getAnnotations()).filter(a -> a.annotationType().isAnnotationPresent(Scope.class)).findFirst();
+        return Arrays.stream(implementation.getAnnotations())
+                .filter(a -> a.annotationType().isAnnotationPresent(Scope.class))
+                .findFirst();
     }
 
     private Class<?> typeOf(Annotation annotation) {
-        return Stream.of(Qualifier.class, Scope.class).filter(i -> annotation.annotationType().isAnnotationPresent(i)).findFirst().orElse(Illegal.class);
+        return Stream.of(Qualifier.class, Scope.class)
+                .filter(i -> annotation.annotationType().isAnnotationPresent(i))
+                .findFirst()
+                .orElse(Illegal.class);
     }
 
-    private @interface Illegal {
-    }
+    private @interface Illegal {}
 
     private ComponentProvider<?> getScopeProvider(Annotation scope, ComponentProvider<?> provider) {
         if (!scopes.containsKey(scope.annotationType())) {
@@ -102,7 +112,8 @@ public class ContextConfig {
                     if (componentRef.getContainer() != Provider.class) {
                         return Optional.empty();
                     }
-                    return Optional.ofNullable(getProvider(componentRef)).map(provider -> (Provider<Object>) () -> provider.get(this));
+                    return Optional.ofNullable(getProvider(componentRef))
+                            .map(provider -> (Provider<Object>) () -> provider.get(this));
                 }
                 return Optional.ofNullable(getProvider(componentRef)).map(provider -> provider.get(this));
             }
@@ -132,5 +143,4 @@ public class ContextConfig {
     interface ScopeProvider {
         ComponentProvider<?> create(ComponentProvider<?> provider);
     }
-
 }
