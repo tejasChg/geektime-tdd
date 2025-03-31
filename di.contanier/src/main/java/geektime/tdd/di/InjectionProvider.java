@@ -122,7 +122,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
     }
 
     private static boolean isOverride(Method m, Method o) {
-        return o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getExceptionTypes());
+        return o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes());
     }
 
     private static <T extends AnnotatedElement> Stream<T> injectable(T[] declaredFields) {

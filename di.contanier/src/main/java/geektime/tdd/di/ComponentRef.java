@@ -38,7 +38,8 @@ public class ComponentRef<ComponentType> {
         if (type instanceof ParameterizedType container) {
             this.container = container.getRawType();
             this.component = new Component((Class<ComponentType>) container.getActualTypeArguments()[0], qualifier);
-        } else {
+        }
+        if (type instanceof Class<?>) {
             this.component = new Component((Class<ComponentType>) type, qualifier);
         }
     }
