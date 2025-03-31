@@ -25,6 +25,11 @@ public class ComponentRef<ComponentType> {
     private Type container;
     private Component component;
 
+    ComponentRef(Annotation qualifier) {
+        Type type = ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        init(type, qualifier);
+    }
+
     ComponentRef(Type type, Annotation qualifier) {
         init(type, qualifier);
     }
