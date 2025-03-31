@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.Stack;
 import java.util.function.Function;
 
@@ -19,7 +18,7 @@ import java.util.function.Function;
 public class ContextConfig {
 
     private Map<Component, ComponentProvider<?>> components = new HashMap<>();
-    private Map<Class<?>, Function<ComponentProvider<?>, ComponentProvider<?>>> scopes = new HashMap<>();
+    private Map<Class<?>, ScopeProvider> scopes = new HashMap<>();
 
     public ContextConfig() {
         scope(Singleton.class, SingletonProvider::new);
@@ -65,34 +64,11 @@ public class ContextConfig {
     }
 
     private ComponentProvider<?> getScopeProvider(Annotation scope, ComponentProvider<?> provider) {
-        return scopes.get(scope.annotationType()).apply(provider);
+        return scopes.get(scope.annotationType()).create(provider);
     }
 
-    public <ScopeType extends Annotation> void scope(Class<ScopeType> scope, Function<ComponentProvider<?>, ComponentProvider<?>> provider) {
+    public <ScopeType extends Annotation> void scope(Class<ScopeType> scope, ScopeProvider provider) {
         scopes.put(scope, provider);
-    }
-
-    static class SingletonProvider<T> implements ComponentProvider<T> {
-
-        private T singleton;
-        private ComponentProvider<T> provider;
-
-        public SingletonProvider(ComponentProvider<T> provider) {
-            this.provider = provider;
-        }
-
-        @Override
-        public T get(Context context) {
-            if (singleton == null) {
-                singleton = provider.get(context);
-            }
-            return singleton;
-        }
-
-        @Override
-        public List<ComponentRef<?>> getDependencies() {
-            return provider.getDependencies();
-        }
     }
 
     public Context getContext() {
@@ -132,11 +108,8 @@ public class ContextConfig {
         }
     }
 
-    interface ComponentProvider<T> {
-        T get(Context context);
-
-        default List<ComponentRef<?>> getDependencies() {
-            return List.of();
-        }
+    interface ScopeProvider{
+        ComponentProvider<?> create(ComponentProvider<?> provider);
     }
+
 }
