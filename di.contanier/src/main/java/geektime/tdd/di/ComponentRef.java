@@ -57,11 +57,6 @@ public class ComponentRef<ComponentType> {
         return container != null;
     }
 
-
-    public Class<?> componentType() {
-        return component.type();
-    }
-
     public Component component() {
         return component;
     }
