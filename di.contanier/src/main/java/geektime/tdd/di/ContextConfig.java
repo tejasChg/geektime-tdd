@@ -53,8 +53,11 @@ public class ContextConfig {
     }
 
     private <Type, Implementation extends Type> ComponentProvider<Implementation> createScopeProvider(Class<Implementation> implementation, List<Annotation> scopes) {
+        if (scopes.size() > 1) {
+            throw new IllegalComponentException();
+        }
         ComponentProvider<Implementation> injectionProvider = new InjectionProvider<>(implementation);
-        return scopes.stream().findFirst().or(() -> fromType(implementation)).map(s -> (ComponentProvider<Implementation>) createScopeProvider(s, injectionProvider))
+        return scopes.stream().findFirst().or(() -> fromType(implementation)).map(s -> (ComponentProvider<Implementation>) getScopeProvider(s, injectionProvider))
             .orElse(injectionProvider);
     }
 
@@ -79,7 +82,10 @@ public class ContextConfig {
     private @interface Illegal {
     }
 
-    private ComponentProvider<?> createScopeProvider(Annotation scope, ComponentProvider<?> provider) {
+    private ComponentProvider<?> getScopeProvider(Annotation scope, ComponentProvider<?> provider) {
+        if (!scopes.containsKey(scope.annotationType())) {
+            throw new IllegalComponentException();
+        }
         return scopes.get(scope.annotationType()).create(provider);
     }
 

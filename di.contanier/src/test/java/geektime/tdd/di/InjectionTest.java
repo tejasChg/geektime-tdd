@@ -96,7 +96,6 @@ public class InjectionTest {
                 }
             }
 
-            //TODO support inject constructor
             @Test
             public void should_inject_provider_via_inject_constructor() {
                 ProviderInjectConstructor instance = new InjectionProvider<>(ProviderInjectConstructor.class).get(context);
@@ -212,7 +211,6 @@ public class InjectionTest {
                 }
             }
 
-            //TODO  inject method with no dependencies will be called
             @Test
             public void should_call_inject_method_even_if_no_dependency_declared() {
                 InjectMethodWithNoDependency instance = new InjectionProvider<>(InjectMethodWithNoDependency.class).get(context);
@@ -236,7 +234,6 @@ public class InjectionTest {
                 assertSame(dependency, instance.dependency);
             }
 
-            //TODO include dependency type from inject method
             @Test
             public void should_include_provider_type_from_inject_method() {
                 InjectionProvider<ProviderInjectMethod> provider = new InjectionProvider<>(ProviderInjectMethod.class);
@@ -313,7 +310,6 @@ public class InjectionTest {
                 }
             }
 
-            //TODO support inject method
             @Test
             public void should_inject_provider_via_inject_method() {
                 ProviderInjectMethod instance = new InjectionProvider<>(ProviderInjectMethod.class).get(context);
@@ -410,7 +406,6 @@ public class InjectionTest {
                 assertSame(dependency, component.dependency);
             }
 
-            //TODO include dependency type from inject field
             @Test
             public void should_include_provider_type_from_inject_field() {
                 InjectionProvider<ProviderInjectField> provider = new InjectionProvider<>(ProviderInjectField.class);
@@ -429,7 +424,6 @@ public class InjectionTest {
                 private Provider<Dependency> dependency;
             }
 
-            //TODO support inject field
             @Test
             public void should_inject_provider_via_inject_field() {
                 ProviderInjectField instance = new InjectionProvider<>(ProviderInjectField.class).get(context);
@@ -440,7 +434,6 @@ public class InjectionTest {
 
         @Nested
         class IllegalInjectFields {
-            //TODO throw exception if field is final
             static class FinalInjectField {
                 @Inject
                 final Dependency dependency = null;
@@ -460,8 +453,6 @@ public class InjectionTest {
                 when(context.get(eq(ComponentRef.of(Dependency.class, new NameLiteral("ChosenOne"))))).thenReturn(Optional.of(dependency));
             }
 
-            //TODO inject with qualifier
-            //TODO include qualifier with dependency
             static class InjectField {
                 @Inject
                 @Named("ChosenOne")

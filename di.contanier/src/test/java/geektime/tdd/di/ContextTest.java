@@ -238,7 +238,6 @@ public class ContextTest {
                 assertSame(context.get(ComponentRef.of(NotSingleton.class)).get(), context.get(ComponentRef.of(NotSingleton.class)).get());
             }
 
-            //TODO get scope from component class
             @Singleton
             static class SingletonAnnotated implements Dependency {
 
@@ -263,6 +262,27 @@ public class ContextTest {
                 List<NotSingleton> instances = IntStream.range(0, 5).mapToObj(i -> context.get(ComponentRef.of(NotSingleton.class)).get()).toList();
 
                 assertEquals(PooledProvider.MAX,new HashSet<>(instances).size());
+            }
+
+            @Test
+            public void should_throw_exception_if_multi_scope_provided(){
+                assertThrows(IllegalComponentException.class,()->config.bind(NotSingleton.class,NotSingleton.class,new SingletonLiteral(),new PooledLiteral()));
+            }
+
+            @Singleton
+            @Pooled
+            static class MultiScopeAnnotated{
+
+            }
+
+            @Test
+            public void should_throw_exception_if_multi_scope_annotated(){
+                assertThrows(IllegalComponentException.class,()->config.bind(MultiScopeAnnotated.class,MultiScopeAnnotated.class));
+            }
+
+            @Test
+            public void should_throw_exception_if_scope_undefined(){
+                assertThrows(IllegalComponentException.class,()->config.bind(NotSingleton.class,NotSingleton.class,new PooledLiteral()));
             }
 
             @Nested
@@ -437,8 +457,6 @@ public class ContextTest {
             }
             return arguments.stream();
         }
-
-        //TODO cyclic dependencies with scope
 
         static class CyclicTestComponentInjectConstructor implements TestComponent {
             @Inject
