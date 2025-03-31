@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Stack;
-import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class ContextConfig {
@@ -42,19 +43,23 @@ public class ContextConfig {
     }
 
     public <Type, Implementation extends Type> void bind(Class<Type> type, Class<Implementation> implementation, Annotation... annotations) {
-        if (Arrays.stream(annotations).map(Annotation::annotationType).anyMatch(a -> !a.isAnnotationPresent(Qualifier.class) && !a.isAnnotationPresent(Scope.class))) {
+        Map<Class<?>, List<Annotation>> annotationGroups = Arrays.stream(annotations).collect(Collectors.groupingBy(this::typeOf, Collectors.toList()));
+
+        if (annotationGroups.containsKey(Illegal.class)) {
             throw new IllegalComponentException();
         }
 
-        Optional<Annotation> scopeForType = Arrays.stream(implementation.getAnnotations()).filter(a -> a.annotationType().isAnnotationPresent(Scope.class)).findFirst();
-        List<Annotation> qualifiers = Arrays.stream(annotations).filter(a -> a.annotationType().isAnnotationPresent(Qualifier.class)).toList();
-        Optional<Annotation> scope = Arrays.stream(annotations).filter(a -> a.annotationType().isAnnotationPresent(Scope.class)).findFirst().or(() -> scopeForType);
+        bind(type, annotationGroups.getOrDefault(Qualifier.class, List.of()), createScopeProvider(implementation, annotationGroups.getOrDefault(Scope.class, List.of())));
+    }
 
+    private <Type, Implementation extends Type> ComponentProvider<Implementation> createScopeProvider(Class<Implementation> implementation, List<Annotation> scopes) {
         ComponentProvider<Implementation> injectionProvider = new InjectionProvider<>(implementation);
+        return scopes.stream().findFirst().or(() -> fromType(implementation)).map(s -> (ComponentProvider<Implementation>) createScopeProvider(s, injectionProvider))
+            .orElse(injectionProvider);
+    }
 
-        ComponentProvider<Implementation> provider =
-            scope.map(s -> (ComponentProvider<Implementation>) getScopeProvider(s, injectionProvider)).orElse(injectionProvider);
 
+    private <Type> void bind(Class<Type> type, List<Annotation> qualifiers, ComponentProvider<?> provider) {
         if (qualifiers.isEmpty()) {
             components.put(new Component(type, null), provider);
         }
@@ -63,7 +68,18 @@ public class ContextConfig {
         }
     }
 
-    private ComponentProvider<?> getScopeProvider(Annotation scope, ComponentProvider<?> provider) {
+    private <Implementation> Optional<Annotation> fromType(Class<Implementation> implementation) {
+        return Arrays.stream(implementation.getAnnotations()).filter(a -> a.annotationType().isAnnotationPresent(Scope.class)).findFirst();
+    }
+
+    private Class<?> typeOf(Annotation annotation) {
+        return Stream.of(Qualifier.class, Scope.class).filter(i -> annotation.annotationType().isAnnotationPresent(i)).findFirst().orElse(Illegal.class);
+    }
+
+    private @interface Illegal {
+    }
+
+    private ComponentProvider<?> createScopeProvider(Annotation scope, ComponentProvider<?> provider) {
         return scopes.get(scope.annotationType()).create(provider);
     }
 
@@ -80,8 +96,7 @@ public class ContextConfig {
                     if (componentRef.getContainer() != Provider.class) {
                         return Optional.empty();
                     }
-                    return Optional.ofNullable(getProvider(componentRef))
-                        .map(provider -> (Provider<Object>) () -> provider.get(this));
+                    return Optional.ofNullable(getProvider(componentRef)).map(provider -> (Provider<Object>) () -> provider.get(this));
                 }
                 return Optional.ofNullable(getProvider(componentRef)).map(provider -> provider.get(this));
             }
@@ -108,7 +123,7 @@ public class ContextConfig {
         }
     }
 
-    interface ScopeProvider{
+    interface ScopeProvider {
         ComponentProvider<?> create(ComponentProvider<?> provider);
     }
 
