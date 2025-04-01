@@ -39,4 +39,3 @@ spotless {
 tasks.build {
     dependsOn(tasks.spotlessApply)
 }
-tasks.register("prepareKotlinBuildScriptModel") {}
