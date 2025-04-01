@@ -12,6 +12,16 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 
+interface TestComponent {
+    default Dependency dependency() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+}
+
+interface Dependency {}
+
+interface AnotherDependency {}
+
 record NameLiteral(String value) implements jakarta.inject.Named {
     @Override
     public Class<? extends Annotation> annotationType() {

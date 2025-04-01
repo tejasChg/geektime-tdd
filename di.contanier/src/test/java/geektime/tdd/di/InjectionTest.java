@@ -118,13 +118,12 @@ public class InjectionTest {
 
             @Test
             public void should_throw_an_exception_if_component_is_abstract() {
-                assertThrows(
-                        IllegalComponentException.class, () -> new InjectionProvider<>(AbstractTestComponent.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(AbstractTestComponent.class));
             }
 
             @Test
             public void should_throw_an_exception_if_component_is_interface() {
-                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(TestComponent.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(TestComponent.class));
             }
 
             static class MultiInjectConstructor implements TestComponent {
@@ -138,8 +137,7 @@ public class InjectionTest {
 
             @Test
             public void should_throw_an_exception_if_multi_inject_constructor_provided() {
-                assertThrows(
-                        IllegalComponentException.class, () -> new InjectionProvider<>(MultiInjectConstructor.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(MultiInjectConstructor.class));
             }
 
             static class NoInjectConstructorNorDefaultConstructor implements TestComponent {
@@ -149,7 +147,7 @@ public class InjectionTest {
             @Test
             public void should_throw_an_exception_if_no_inject_nor_default_constructors_provided() {
                 assertThrows(
-                        IllegalComponentException.class,
+                        ComponentError.class,
                         () -> new InjectionProvider<>(NoInjectConstructorNorDefaultConstructor.class));
             }
         }
@@ -198,8 +196,7 @@ public class InjectionTest {
             @Test
             public void should_throw_exception_if_multi_qualifier_given() {
                 assertThrows(
-                        IllegalComponentException.class,
-                        () -> new InjectionProvider<>(MultiQualifierInjectConstructor.class));
+                        ComponentError.class, () -> new InjectionProvider<>(MultiQualifierInjectConstructor.class));
             }
         }
     }
@@ -343,9 +340,7 @@ public class InjectionTest {
 
             @Test
             public void should_throw_exception_if_inject_method_has_type_parameter() {
-                assertThrows(
-                        IllegalComponentException.class,
-                        () -> new InjectionProvider<>(InjectMethodWithTypeParameter.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(InjectMethodWithTypeParameter.class));
             }
         }
 
@@ -391,9 +386,7 @@ public class InjectionTest {
 
             @Test
             public void should_throw_exception_if_multi_qualifier_given() {
-                assertThrows(
-                        IllegalComponentException.class,
-                        () -> new InjectionProvider<>(MultiQualifierInjectMethod.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(MultiQualifierInjectMethod.class));
             }
         }
     }
@@ -464,7 +457,7 @@ public class InjectionTest {
 
             @Test
             public void should_throw_exception_if_field_is_final() {
-                assertThrows(IllegalComponentException.class, () -> new InjectionProvider<>(FinalInjectField.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(FinalInjectField.class));
             }
         }
 
@@ -509,9 +502,7 @@ public class InjectionTest {
 
             @Test
             public void should_throw_exception_if_multi_qualifier_given() {
-                assertThrows(
-                        IllegalComponentException.class,
-                        () -> new InjectionProvider<>(MultiQualifierInjectField.class));
+                assertThrows(ComponentError.class, () -> new InjectionProvider<>(MultiQualifierInjectField.class));
             }
         }
     }
