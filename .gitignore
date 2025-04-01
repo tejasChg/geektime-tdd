@@ -15,4 +15,5 @@ Brewfile.lock.json
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+gradle/
 
